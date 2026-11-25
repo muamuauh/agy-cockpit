@@ -268,6 +268,51 @@ test("parseTranscriptFile avoids tool-wait inflation on tool-calling turns", () 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
+test("parseTranscriptFile uses last tool call start for streamed parallel multi-tool turns", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "agy-cockpit-multitool-"));
+  const transcriptPath = path.join(tmpDir, "transcript.jsonl");
+  const lines = [
+    JSON.stringify({
+      step_index: 1,
+      type: "PLANNER_RESPONSE",
+      created_at: "2026-11-25T10:00:00Z",
+      model: "gemini-4-neon-high",
+      input_tokens: 10000,
+      cache_read_tokens: 80000,
+      output_tokens: 6000,
+      tool_calls: [{ name: "edit_file" }, { name: "edit_file" }, { name: "edit_file" }],
+    }),
+    // 1st tool dispatched eagerly at +6s while model is still streaming remaining tool calls
+    JSON.stringify({ step_index: 2, type: "GENERIC", created_at: "2026-11-25T10:00:06Z", content: "ok 1" }),
+    JSON.stringify({ step_index: 3, type: "GENERIC", created_at: "2026-11-25T10:00:25Z", content: "ok 2" }),
+    // Last (3rd) tool dispatched at +50s -> true model streaming speed is 6000 / 50 = 120 tok/s (not 1000 tok/s!)
+    JSON.stringify({ step_index: 4, type: "GENERIC", created_at: "2026-11-25T10:00:50Z", content: "ok 3" }),
+    // Non-tool final answer followed by next turn's PreInvocation SYSTEM_MESSAGE 2 minutes later
+    JSON.stringify({
+      step_index: 5,
+      type: "PLANNER_RESPONSE",
+      created_at: "2026-11-25T10:01:00Z",
+      model: "gemini-4-neon-high",
+      input_tokens: 2000,
+      cache_read_tokens: 90000,
+      output_tokens: 500,
+      tool_calls: [],
+    }),
+    JSON.stringify({ step_index: 6, type: "SYSTEM_MESSAGE", created_at: "2026-11-25T10:03:00Z", content: "next turn hook" }),
+    JSON.stringify({ step_index: 7, type: "USER_INPUT", created_at: "2026-11-25T10:03:00Z", content: "next question" }),
+  ];
+  fs.writeFileSync(transcriptPath, lines.join("\n") + "\n", "utf8");
+
+  const parsed = parseTranscriptFile(transcriptPath, { conversationId: "conv-multitool" });
+  assert.equal(parsed.recentTurns[0].latencyMs, 50_000);
+  assert.equal(parsed.recentTurns[0].speedTokPerSec, 120);
+  // Non-tool turn without hook telemetry should not absorb next turn's SYSTEM_MESSAGE wait
+  assert.equal(parsed.recentTurns[1].latencyMs, null);
+  assert.equal(parsed.recentTurns[1].speedTokPerSec, null);
+
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
 test("computeUsageSummary aggregates 5h, 7d, and all-time tokens with reset timers and model breakdown", () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "agy-cockpit-usage-"));
   const nowMs = Date.parse("2026-11-24T12:00:00Z");

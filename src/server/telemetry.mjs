@@ -527,21 +527,34 @@ export function parseTranscriptFile(
     totalOutputTokens += outputTokens;
     totalToolCalls += toolCalls.length;
 
-    // Transcript fallback delta to next logged step (1-second resolution).
-    // For tool-calling turns, the next step's created_at marks tool start, i.e., pure model latency.
+    // Transcript fallback delta (1-second resolution).
+    // Antigravity streams tool calls eagerly: each tool's GENERIC step created_at marks when
+    // that tool call finished streaming and started executing. For parallel multi-tool turns,
+    // using the FIRST GENERIC severely undercounts model generation time (inflating tok/s to
+    // 500–1000+); using the LAST GENERIC step belonging to this turn marks when the model
+    // finished streaming all output_tokens, while still excluding post-stream tool wait.
+    // Non-tool turns (toolCalls.length === 0) have no post-turn GENERIC anchor, so they rely
+    // on millisecond Hook PostInvocation/Stop telemetry instead of risking next-turn wait time.
     let fallbackLatencyMs = null;
-    if (createdAtMs !== null) {
+    if (createdAtMs !== null && toolCalls.length > 0) {
+      let lastToolStartMs = null;
+      let seenTools = 0;
       for (let j = i + 1; j < records.length; j++) {
         const nextRec = records[j];
-        // Stop before next user prompt (that gap is user think time, not model latency)
-        if (nextRec.type === "USER_INPUT") break;
-        const nextMs = parseIsoMs(nextRec.created_at);
-        if (nextMs !== null && nextMs > createdAtMs) {
-          const delta = nextMs - createdAtMs;
-          if (delta >= 500 && delta <= 600_000) {
-            fallbackLatencyMs = delta;
+        if (nextRec.type === "USER_INPUT" || nextRec.type === "PLANNER_RESPONSE") break;
+        if (nextRec.type === "GENERIC") {
+          const nextMs = parseIsoMs(nextRec.created_at);
+          if (nextMs !== null && nextMs > createdAtMs) {
+            lastToolStartMs = nextMs;
           }
-          break;
+          seenTools++;
+          if (seenTools >= toolCalls.length) break;
+        }
+      }
+      if (lastToolStartMs !== null) {
+        const delta = lastToolStartMs - createdAtMs;
+        if (delta >= 500 && delta <= 600_000) {
+          fallbackLatencyMs = delta;
         }
       }
     }
