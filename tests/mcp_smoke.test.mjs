@@ -24,6 +24,7 @@ test("bundled MCP server serves tools, ui:// resource, and switches modes end-to
     assert.ok(names.includes("cockpit_get_snapshot"));
     assert.ok(names.includes("cockpit_set_mode"));
     assert.ok(names.includes("cockpit_set_quotas"));
+    assert.ok(names.includes("cockpit_set_ui_prefs"));
 
     const openTool = toolsRes.tools.find((t) => t.name === "open_cockpit");
     assert.equal(openTool._meta?.ui?.resourceUri, "ui://agy-cockpit/dashboard.html");
@@ -69,6 +70,15 @@ test("bundled MCP server serves tools, ui:// resource, and switches modes end-to
     });
     assert.equal(billableRes.structuredContent.usage.metric, "billable");
     assert.equal(billableRes.structuredContent.usage.fiveHour.limitTokens, 8_000_000);
+
+    // Persist collapsed cards via app-only tool and confirm snapshot reflects it
+    const prefsRes = await client.callTool({
+      name: "cockpit_set_ui_prefs",
+      arguments: { collapsedCards: ["perf", "usage"] },
+    });
+    assert.deepEqual(prefsRes.structuredContent.uiPrefs.collapsedCards, ["perf", "usage"]);
+    const snapAfterPrefs = await client.callTool({ name: "cockpit_get_snapshot", arguments: {} });
+    assert.deepEqual(snapAfterPrefs.structuredContent.uiPrefs.collapsedCards, ["perf", "usage"]);
   } finally {
     await client.close();
     fs.rmSync(dataDir, { recursive: true, force: true });

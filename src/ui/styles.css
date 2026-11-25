@@ -200,6 +200,26 @@ body {
   display: flex;
   flex-direction: column;
   gap: 9px;
+  transition: padding 0.15s ease;
+}
+
+.card.collapsed {
+  padding: 8px 12px;
+  gap: 0;
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.card.collapsed > .card-body {
+  display: none;
+}
+
+.card.collapsed .hide-when-collapsed {
+  display: none !important;
 }
 
 .card-wide {
@@ -213,10 +233,56 @@ body {
   gap: 6px;
 }
 
+.card-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  user-select: none;
+  min-width: 0;
+}
+
+.card-toggle:hover .card-title,
+.card-toggle:hover .chevron {
+  color: var(--accent);
+}
+
+.chevron {
+  display: inline-block;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--fg-muted);
+  transition: transform 0.16s ease, color 0.15s ease;
+}
+
+.card.collapsed .chevron {
+  transform: rotate(-90deg);
+}
+
+.card-mini-summary {
+  display: none;
+  font-size: 11px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-left: auto;
+}
+
+.card.collapsed .card-mini-summary {
+  display: inline-block;
+}
+
 .card-title {
   font-weight: 600;
   font-size: 12px;
   color: var(--fg);
+  transition: color 0.15s ease;
 }
 
 .gauge-row {

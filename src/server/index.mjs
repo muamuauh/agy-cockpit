@@ -13,6 +13,8 @@ import {
   resolveDataDir,
   setModeState,
   setQuotaConfig,
+  setUiPrefs,
+  VALID_CARDS,
   VALID_MODES,
   VALID_QUOTA_METRICS,
 } from "../shared/state.mjs";
@@ -224,6 +226,28 @@ export function createCockpitServer({ dataDir, htmlPath }) {
           },
         },
       },
+      {
+        name: "cockpit_set_ui_prefs",
+        title: "Update Dashboard UI Preferences",
+        description: "App-only tool to persist collapsed dashboard cards.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            collapsedCards: {
+              type: "array",
+              items: {
+                type: "string",
+                enum: VALID_CARDS,
+              },
+            },
+          },
+        },
+        _meta: {
+          ui: {
+            visibility: ["app"],
+          },
+        },
+      },
     ],
   }));
 
@@ -303,6 +327,20 @@ export function createCockpitServer({ dataDir, htmlPath }) {
       return {
         content: [{ type: "text", text: `Quotas updated. ${summarizeSnapshotText(snapshot)}` }],
         structuredContent: snapshot,
+      };
+    }
+
+    if (name === "cockpit_set_ui_prefs") {
+      if (!Array.isArray(args.collapsedCards)) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "Invalid collapsedCards: expected an array of card ids." }],
+        };
+      }
+      const uiPrefs = setUiPrefs(resolvedDataDir, { collapsedCards: args.collapsedCards });
+      return {
+        content: [{ type: "text", text: `UI prefs updated (${uiPrefs.collapsedCards.length} collapsed).` }],
+        structuredContent: { uiPrefs },
       };
     }
 

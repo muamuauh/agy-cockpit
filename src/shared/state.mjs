@@ -4,6 +4,7 @@ import path from "node:path";
 
 export const VALID_MODES = ["normal", "plan", "ask", "turbo"];
 export const VALID_QUOTA_METRICS = ["billable", "total"];
+export const VALID_CARDS = ["context", "mode", "perf", "usage"];
 
 export const DEFAULT_QUOTAS = {
   metric: "billable",
@@ -163,6 +164,29 @@ export function setQuotaConfig(dataDir, patch = {}) {
     updatedAt: new Date().toISOString(),
   };
   writeJsonAtomic(path.join(dataDir, "quotas.json"), next);
+  return next;
+}
+
+export function getUiPrefs(dataDir) {
+  const filePath = path.join(dataDir, "ui_prefs.json");
+  const saved = readJsonSafe(filePath, null);
+  const rawList = Array.isArray(saved?.collapsedCards) ? saved.collapsedCards : [];
+  const collapsedCards = [...new Set(rawList.filter((id) => VALID_CARDS.includes(id)))];
+  return {
+    collapsedCards,
+    updatedAt: saved?.updatedAt || null,
+  };
+}
+
+export function setUiPrefs(dataDir, patch = {}) {
+  const prev = getUiPrefs(dataDir);
+  const rawList = Array.isArray(patch.collapsedCards) ? patch.collapsedCards : prev.collapsedCards;
+  const collapsedCards = [...new Set(rawList.filter((id) => VALID_CARDS.includes(id)))];
+  const next = {
+    collapsedCards,
+    updatedAt: new Date().toISOString(),
+  };
+  writeJsonAtomic(path.join(dataDir, "ui_prefs.json"), next);
   return next;
 }
 

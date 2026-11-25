@@ -8,6 +8,7 @@ import {
   getModeState,
   getQuotaConfig,
   getSessionsIndex,
+  getUiPrefs,
   MODE_DESCRIPTIONS,
   readTelemetry,
 } from "../shared/state.mjs";
@@ -968,6 +969,7 @@ export function buildCockpitSnapshot({
 } = {}) {
   const modeState = getModeState(dataDir);
   const quotaConfig = getQuotaConfig(dataDir);
+  const uiPrefs = getUiPrefs(dataDir);
   const activeSession = getActiveSession(dataDir);
   const sessionsIndex = getSessionsIndex(dataDir);
   const hookTelemetry = readTelemetry(dataDir);
@@ -1121,5 +1123,6 @@ export function buildCockpitSnapshot({
     conversations: conversationList,
     metrics,
     usage,
+    uiPrefs,
   };
 }

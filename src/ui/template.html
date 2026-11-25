@@ -32,10 +32,14 @@
 
     <main class="grid">
       <!-- Context Window Gauge -->
-      <section class="card">
+      <section class="card" data-card="context">
         <div class="card-head">
-          <span class="card-title">上下文窗口</span>
-          <select id="limitSelect" class="select-xs" title="窗口上限">
+          <button type="button" class="card-toggle" data-toggle-card="context" aria-expanded="true" title="点击折叠/展开">
+            <span class="chevron" aria-hidden="true">▾</span>
+            <span class="card-title">上下文窗口</span>
+          </button>
+          <span class="card-mini-summary mono" id="miniContext">--</span>
+          <select id="limitSelect" class="select-xs hide-when-collapsed" title="窗口上限">
             <option value="0">Auto</option>
             <option value="200000">200K</option>
             <option value="500000">500K</option>
@@ -43,6 +47,7 @@
             <option value="2000000">2M</option>
           </select>
         </div>
+        <div class="card-body">
         <div class="gauge-row">
           <div class="ring-anchor" id="ringAnchor">
             <div class="ring-wrap" id="ringTrigger" tabindex="0" role="button" aria-label="查看上下文窗口详细占用分布" aria-describedby="ctxPopover">
@@ -105,14 +110,19 @@
             <span class="mini-v mono" id="totTurns">0 / 0</span>
           </div>
         </div>
+        </div>
       </section>
 
       <!-- Mode Switcher -->
-      <section class="card">
+      <section class="card" data-card="mode">
         <div class="card-head">
-          <span class="card-title">执行模式控制</span>
+          <button type="button" class="card-toggle" data-toggle-card="mode" aria-expanded="true" title="点击折叠/展开">
+            <span class="chevron" aria-hidden="true">▾</span>
+            <span class="card-title">执行模式控制</span>
+          </button>
           <span class="mode-badge" id="modeBadge">NORMAL</span>
         </div>
+        <div class="card-body">
         <div class="segmented" id="modeSegment" role="radiogroup" aria-label="Execution Mode">
           <button class="seg-btn" data-mode="normal">Normal</button>
           <button class="seg-btn" data-mode="plan">Plan</button>
@@ -126,14 +136,20 @@
           <button class="pill-btn" data-cmd="/compact">/compact</button>
           <button class="pill-btn" data-cmd="/grill-me">/grill-me</button>
         </div>
+        </div>
       </section>
 
       <!-- Latency & Speed Telemetry -->
-      <section class="card card-wide">
+      <section class="card card-wide" data-card="perf">
         <div class="card-head">
-          <span class="card-title">延迟与生成速度</span>
-          <span class="source-pill" id="latencySource">waiting</span>
+          <button type="button" class="card-toggle" data-toggle-card="perf" aria-expanded="true" title="点击折叠/展开">
+            <span class="chevron" aria-hidden="true">▾</span>
+            <span class="card-title">延迟与生成速度</span>
+          </button>
+          <span class="card-mini-summary mono" id="miniPerf">--</span>
+          <span class="source-pill hide-when-collapsed" id="latencySource">waiting</span>
         </div>
+        <div class="card-body">
         <div class="perf-grid">
           <div class="perf-tile">
             <span class="perf-k">最近耗时</span>
@@ -170,16 +186,21 @@
             <svg id="trendSvg" class="trend-svg" aria-label="Performance trend chart"></svg>
           </div>
         </div>
+        </div>
       </section>
 
       <!-- Global Token Usage & 5h / Weekly Quota Monitor -->
-      <section class="card card-wide">
+      <section class="card card-wide" data-card="usage">
         <div class="card-head">
           <div class="usage-head-left">
-            <span class="card-title">Token 用量与限额</span>
-            <span class="source-pill" id="usageMetaPill">本地聚合</span>
+            <button type="button" class="card-toggle" data-toggle-card="usage" aria-expanded="true" title="点击折叠/展开">
+              <span class="chevron" aria-hidden="true">▾</span>
+              <span class="card-title">Token 用量与限额</span>
+            </button>
+            <span class="source-pill hide-when-collapsed" id="usageMetaPill">本地聚合</span>
           </div>
-          <div class="usage-head-right">
+          <span class="card-mini-summary mono" id="miniUsage">--</span>
+          <div class="usage-head-right hide-when-collapsed">
             <select id="quotaMetricSelect" class="select-xs" title="限额计算口径">
               <option value="billable">非缓存 (新入+输出)</option>
               <option value="total">总计 (含缓存)</option>
@@ -187,6 +208,7 @@
             <button id="quotaEditToggle" class="tab-btn" title="自定义 5h 与周限额预算">⚙ 限额</button>
           </div>
         </div>
+        <div class="card-body">
 
         <form id="quotaEditor" class="quota-editor hidden">
           <div class="quota-editor-row">
@@ -266,6 +288,7 @@
         <p class="usage-note">
           Token 聚合自本机全部会话日志；「非缓存」与「含缓存」分别保存独立预算。点右上「⚙ 限额」填入官方 View Usage 剩余% 即可一键反推校准。
         </p>
+        </div>
       </section>
     </main>
 

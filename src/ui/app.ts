@@ -7,6 +7,7 @@ import {
 type Mode = "normal" | "plan" | "ask" | "turbo";
 type ChartKind = "speed" | "latency" | "context";
 type QuotaMetric = "billable" | "total";
+type CardId = "context" | "mode" | "perf" | "usage";
 
 interface UsageWindow {
   turns: number;
@@ -171,9 +172,14 @@ interface Snapshot {
     recentTurns: TurnPoint[];
   } | null;
   usage?: UsageSummary | null;
+  uiPrefs?: {
+    collapsedCards: CardId[];
+    updatedAt?: string | null;
+  } | null;
 }
 
 const CIRCUMFERENCE = 2 * Math.PI * 40; // r = 40
+const STORAGE_COLLAPSED_KEY = "agy-cockpit:collapsed-cards";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -182,11 +188,45 @@ let selectedProject = "";
 let selectedConversationId: string | null = null;
 let selectedLimitOverride = 0;
 let activeChart: ChartKind = "speed";
+let collapsedCards = new Set<CardId>();
+let hasHydratedServerPrefs = false;
 let pollTimer: number | null = null;
 let pollInFlight = false;
 let modeInFlight = false;
 let stateSeq = 0;
 let toastTimer: number | null = null;
+
+function loadLocalCollapsed(): Set<CardId> {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_COLLAPSED_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) {
+      return new Set(arr.filter((v): v is CardId => ["context", "mode", "perf", "usage"].includes(v)));
+    }
+  } catch {
+    // ignore storage errors in restricted iframes
+  }
+  return new Set();
+}
+
+function saveLocalCollapsed() {
+  try {
+    window.localStorage.setItem(STORAGE_COLLAPSED_KEY, JSON.stringify(Array.from(collapsedCards)));
+  } catch {
+    // ignore
+  }
+}
+
+function applyCollapsedState() {
+  document.querySelectorAll<HTMLElement>(".card[data-card]").forEach((card) => {
+    const id = card.dataset.card as CardId;
+    const isCollapsed = collapsedCards.has(id);
+    card.classList.toggle("collapsed", isCollapsed);
+    const btn = card.querySelector<HTMLButtonElement>(".card-toggle");
+    if (btn) btn.setAttribute("aria-expanded", String(!isCollapsed));
+  });
+}
 
 function escHtml(s: string): string {
   return s
@@ -363,6 +403,9 @@ function renderUsage(usage: UsageSummary | null | undefined) {
 
   renderQuotaWindow("q5h", usage.fiveHour);
   renderQuotaWindow("q7d", usage.weekly);
+  const r5 = typeof usage.fiveHour.remainingPct === "number" ? usage.fiveHour.remainingPct : Math.max(0, 100 - usage.fiveHour.usedPct);
+  const r7 = typeof usage.weekly.remainingPct === "number" ? usage.weekly.remainingPct : Math.max(0, 100 - usage.weekly.usedPct);
+  $("miniUsage").textContent = `5h ${r5.toFixed(0)}% · 7d ${r7.toFixed(0)}%`;
 
   // 7-day daily bars
   const dailyEl = $("dailyBars");
@@ -544,6 +587,13 @@ function renderTrendChart(turns: TurnPoint[], kind: ChartKind) {
 function renderSnapshot(snap: Snapshot) {
   currentSnapshot = snap;
 
+  if (!hasHydratedServerPrefs && snap.uiPrefs && Array.isArray(snap.uiPrefs.collapsedCards)) {
+    hasHydratedServerPrefs = true;
+    collapsedCards = new Set(snap.uiPrefs.collapsedCards);
+    saveLocalCollapsed();
+    applyCollapsedState();
+  }
+
   // Keep user's explicit selection only if it still exists in the list
   if (
     selectedConversationId &&
@@ -643,6 +693,8 @@ function renderSnapshot(snap: Snapshot) {
     $("latAvg").textContent = "--";
     $("spdAvg").textContent = "--";
     $("latencySource").textContent = "no data";
+    $("miniContext").textContent = "--";
+    $("miniPerf").textContent = "--";
     $("convTitle").textContent = "";
     renderContextPopover(null);
     renderTrendChart([], activeChart);
@@ -658,6 +710,7 @@ function renderSnapshot(snap: Snapshot) {
 
     $("ctxPct").textContent = `${pct.toFixed(1)}%`;
     $("ctxUsed").textContent = fmtTokens(m.context.usedTokens);
+    $("miniContext").textContent = `${pct.toFixed(1)}% · ${fmtTokens(m.context.usedTokens)}`;
     $("ctxRatio").textContent = `${fmtTokens(m.context.usedTokens)} / ${fmtTokens(m.context.limitTokens)}`;
     $("cacheHit").textContent = `${m.context.cacheHitPct.toFixed(1)}%`;
     $("uncachedIn").textContent = fmtTokens(m.context.uncachedInputTokens);
@@ -672,6 +725,10 @@ function renderSnapshot(snap: Snapshot) {
     const p = m.performance;
     $("latLatest").textContent = fmtSec(p.latestLatencyMs);
     $("spdLatest").textContent = p.latestSpeedTokPerSec !== null ? `${p.latestSpeedTokPerSec} tok/s` : "--";
+    $("miniPerf").textContent =
+      p.latestSpeedTokPerSec !== null
+        ? `${fmtSec(p.latestLatencyMs)} · ${p.latestSpeedTokPerSec} tok/s`
+        : fmtSec(p.latestLatencyMs);
     $("latAvg").textContent = `${fmtSec(p.avgLatencyMs)} / ${fmtSec(p.p95LatencyMs)}`;
     $("spdAvg").textContent =
       p.avgSpeedTokPerSec !== null
@@ -763,6 +820,42 @@ async function main() {
     });
     ro.observe($("chartWrap"));
   }
+
+  // Hydrate instant local collapse prefs before server snapshot arrives
+  collapsedCards = loadLocalCollapsed();
+  applyCollapsedState();
+
+  // Wire collapsible cards (persist locally + backend ui_prefs.json)
+  document.querySelectorAll<HTMLButtonElement>(".card-toggle[data-toggle-card]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.toggleCard as CardId;
+      if (!id) return;
+      hasHydratedServerPrefs = true;
+      if (collapsedCards.has(id)) {
+        collapsedCards.delete(id);
+      } else {
+        collapsedCards.add(id);
+        if (id === "context") $("ringAnchor").classList.remove("pinned");
+      }
+      applyCollapsedState();
+      saveLocalCollapsed();
+      if (id === "perf" && !collapsedCards.has("perf") && currentSnapshot?.metrics) {
+        window.requestAnimationFrame(() => {
+          if (currentSnapshot?.metrics) {
+            renderTrendChart(currentSnapshot.metrics.recentTurns, activeChart);
+          }
+        });
+      }
+      void app
+        .callServerTool({
+          name: "cockpit_set_ui_prefs",
+          arguments: { collapsedCards: Array.from(collapsedCards) },
+        })
+        .catch(() => {
+          // local storage already saved; ignore transient RPC errors
+        });
+    });
+  });
 
   // Wire UI listeners
   const ringAnchor = $("ringAnchor");
