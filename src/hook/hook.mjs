@@ -68,7 +68,7 @@ export function handleHookPayload(payload, dataDir) {
           {
             systemMessage: {
               systemMessage:
-                "[Agy Cockpit · Plan 模式生效中] 当前处于只读规划模式：请仅阅读分析与制定计划，不要尝试修改文件或运行终端命令（edit_file / write_file / run_command 已被 Hook 拦截）。请先输出清晰方案，待用户在 Agy Cockpit 面板切回 Normal 或 Turbo 模式后再执行改动。",
+                "[Agy Cockpit · Plan 模式生效中] 当前处于只读规划模式：请仅阅读分析与制定计划，不要尝试修改文件或运行终端命令（edit_file / write_file / run_command 已被 Hook 拦截）。请先输出清晰方案，待用户在 Agy Cockpit 面板切回 Auto 或 Turbo 模式后再执行改动。",
             },
           },
         ],
@@ -129,7 +129,7 @@ export function handleHookPayload(payload, dataDir) {
     if (mode === "plan") {
       return {
         decision: "deny",
-        reason: `Agy Cockpit [Plan 模式]：已拦截 ${toolName}。当前处于只读规划模式，请在 Agy Cockpit 面板切换到 Normal / Ask / Turbo 后再执行修改。`,
+        reason: `Agy Cockpit [Plan 模式]：已拦截 ${toolName}。当前处于只读规划模式，请在 Agy Cockpit 面板切换到 Auto / Ask / Turbo 后再执行修改。`,
       };
     }
     if (mode === "ask") {

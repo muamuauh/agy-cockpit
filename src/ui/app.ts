@@ -4,7 +4,7 @@ import {
   applyHostStyleVariables,
 } from "@modelcontextprotocol/ext-apps";
 
-type Mode = "normal" | "plan" | "ask" | "turbo";
+type Mode = "auto" | "plan" | "ask" | "turbo";
 type ChartKind = "speed" | "latency" | "context";
 type QuotaMetric = "billable" | "total";
 type CardId = "context" | "mode" | "perf" | "usage";

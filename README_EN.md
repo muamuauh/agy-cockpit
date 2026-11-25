@@ -7,7 +7,7 @@
 <p><strong>Status Telemetry &amp; Execution Mode Cockpit for Google Antigravity</strong></p>
 
 <p>
-  Context Window Gauge &amp; Hover Breakdown · Cache Hit Rate · Latency &amp; Speed Curves · 5h / 7d Token Quotas · Normal / Plan / Ask / Turbo Switcher
+  Context Window Gauge &amp; Hover Breakdown · Cache Hit Rate · Latency &amp; Speed Curves · 5h / 7d Token Quotas · Auto / Plan / Ask / Turbo Switcher
 </p>
 
 <p>
@@ -68,7 +68,7 @@
 | :--- | :--- |
 | **Context Gauge & Hover Breakdown** | Color-coded SVG context ring (`<60%` green / `60%–85%` amber / `≥85%` red), exact `used / limit`, cache hit rate, and session totals. **Hover or click the ring** for a 4-category stacked breakdown (System & Tools, Tool Outputs / Files, Assistant & Tool Args, User & System Messages), compaction count, estimated remaining turns, and Top-4 tool consumers. |
 | **Project → Session Filtering** | Read-only SQLite lookup of `conversation_summaries.db` to display human-readable `Title (Project)` labels while filtering out subagents and `/btw` sidebar questions. Single-row cascading **Project → Session** dropdowns fit cleanly even in narrow sidebars. |
-| **4-Tier Execution Mode Switcher** | Instant toggle between **`Normal` / `Plan` / `Ask` / `Turbo`** enforced by `hooks.json`. Mode mutations use an app-only tool (`visibility: ["app"]`) hidden from the model. Includes one-click `/plan`, `/compact`, and `/grill-me` quick actions. |
+| **4-Tier Execution Mode Switcher** | Instant toggle between **`Auto` / `Plan` / `Ask` / `Turbo`** enforced by `hooks.json`. Mode mutations use an app-only tool (`visibility: ["app"]`) hidden from the model. Includes one-click `/plan`, `/compact`, and `/grill-me` quick actions. |
 | **Latency & Speed Telemetry** | Combines millisecond Hook timing with pure-model transcript deltas (preventing long tool/approval waits from distorting `tok/s`), displaying latest/avg/P95 latency, latest/avg/peak speed, and a responsive 1:1 SVG 24-turn trend chart. |
 | **5h / 7d Token Usage & Quotas** | Aggregates local tokens across all conversations for **5-hour rolling**, **7-day weekly**, and **all-time** windows, showing `% left` bars, rolling reset countdowns, 7-day daily bars, and `Gemini` vs `Claude/GPT` pool splits. Supports independent budgets for non-cached vs total tokens plus one-click calibration from official `View Usage` percentages. |
 
@@ -80,7 +80,7 @@ Agy Cockpit acts as an upper-layer hook controller layered cleanly above Antigra
 
 | Mode | `PreInvocation` | `PreToolUse` | Best For |
 | :--- | :--- | :--- | :--- |
-| **`Normal`** | Telemetry only | Returns `allow` so host preset & sandbox govern execution | Everyday default |
+| **`Auto`** | Telemetry only | Returns `allow` so host preset & sandbox govern execution | Everyday default |
 | **`Plan`** | Injects read-only planning directive | Hard-blocks (`deny`) `edit_file`, `write_file`, `run_command` | Architecture design & read-only audits |
 | **`Ask`** | Telemetry only | Forces approval (`force_ask`, ignoring Always Allow cache) | High-stakes edits & production repos |
 | **`Turbo`** | Injects batched autonomous execution directive (preserving safety redlines) | Allows mutating, shell, MCP & web tools | Fast in-workspace iteration (pairs great with native `Auto`) |

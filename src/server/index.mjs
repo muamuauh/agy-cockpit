@@ -137,7 +137,7 @@ export function createCockpitServer({ dataDir, htmlPath }) {
         name: "open_cockpit",
         title: "Agy Cockpit",
         description:
-          "Open the Agy Cockpit monitoring dashboard showing real-time context window usage, cache hit rate, turn latency/speed telemetry, 5h/7d token quota monitor, and execution mode switcher (Normal/Plan/Ask/Turbo).",
+          "Open the Agy Cockpit monitoring dashboard showing real-time context window usage, cache hit rate, turn latency/speed telemetry, 5h/7d token quota monitor, and execution mode switcher (Auto/Plan/Ask/Turbo).",
         inputSchema: {
           type: "object",
           properties: {
@@ -183,7 +183,7 @@ export function createCockpitServer({ dataDir, htmlPath }) {
       {
         name: "cockpit_set_mode",
         title: "Set Execution Mode",
-        description: "App-only tool to switch Agy Cockpit hook mode between normal, plan, ask, and turbo.",
+        description: "App-only tool to switch Agy Cockpit hook mode between auto, plan, ask, and turbo.",
         inputSchema: {
           type: "object",
           required: ["mode"],

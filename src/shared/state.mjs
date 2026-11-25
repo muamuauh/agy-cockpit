@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-export const VALID_MODES = ["normal", "plan", "ask", "turbo"];
+export const VALID_MODES = ["auto", "plan", "ask", "turbo"];
 export const VALID_QUOTA_METRICS = ["billable", "total"];
 export const VALID_CARDS = ["context", "mode", "perf", "usage"];
 
@@ -19,9 +19,9 @@ export const DEFAULT_QUOTAS = {
 };
 
 export const MODE_DESCRIPTIONS = {
-  normal: {
-    label: "Normal",
-    badge: "默认策略",
+  auto: {
+    label: "Auto",
+    badge: "默认自动",
     summary: "Hook 放行写入与命令（交由 Antigravity 原生安全预设与沙箱把关），仅采集延迟与会话遥测。",
   },
   plan: {
@@ -99,7 +99,7 @@ export function writeJsonAtomic(filePath, data) {
 export function getModeState(dataDir) {
   const filePath = path.join(dataDir, "mode.json");
   const saved = readJsonSafe(filePath, null);
-  const mode = saved && VALID_MODES.includes(saved.mode) ? saved.mode : "normal";
+  const mode = saved && VALID_MODES.includes(saved.mode) ? saved.mode : "auto";
   return {
     mode,
     updatedAt: saved?.updatedAt || null,

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Google Antigravity MCP App + Lifecycle Hooks plugin for context window monitoring, hover breakdown, latency/speed telemetry, 5h/7d token quota tracking, and Normal/Plan/Ask/Turbo execution mode control.",
+  "description": "Google Antigravity MCP App + Lifecycle Hooks plugin for context window monitoring, hover breakdown, latency/speed telemetry, 5h/7d token quota tracking, and Auto/Plan/Ask/Turbo execution mode control.",
   "author": "muamuauh",
   "license": "MIT",
   "homepage": "https://github.com/muamuauh/agy-cockpit#readme",

@@ -41,7 +41,7 @@ test("bundled MCP server serves tools, ui:// resource, and switches modes end-to
 
     // Call open_cockpit with empty args (entrypoint launch contract)
     const openRes = await client.callTool({ name: "open_cockpit", arguments: {} });
-    assert.equal(openRes.structuredContent.mode, "normal");
+    assert.equal(openRes.structuredContent.mode, "auto");
 
     // Switch mode via app-only tool and verify persistence
     const setRes = await client.callTool({

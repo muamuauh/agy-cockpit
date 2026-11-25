@@ -18,10 +18,10 @@ function runHook(payload, dataDir) {
   return JSON.parse(res.stdout.trim());
 }
 
-test("bundled hook.mjs enforces normal, plan, ask, and turbo modes and records latency", async () => {
+test("bundled hook.mjs enforces auto, plan, ask, and turbo modes and records latency", async () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "agy-cockpit-hook-"));
 
-  // Normal mode -> explicit decision: "allow" (PreToolUse is fail-closed in Antigravity)
+  // Auto mode -> explicit decision: "allow" (PreToolUse is fail-closed in Antigravity)
   let out = runHook(
     { hookEventName: "PreToolUse", toolCall: { name: "edit_file" } },
     dataDir,

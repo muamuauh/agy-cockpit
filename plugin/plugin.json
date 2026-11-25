@@ -2,7 +2,7 @@
   "name": "agy-cockpit",
   "displayName": "Agy Cockpit",
   "version": "1.0.0",
-  "description": "Real-time context window gauge, cache hit rate, turn latency/speed telemetry, 5h/7d token usage monitor, and Normal/Plan/Ask/Turbo execution mode switcher for Antigravity.",
+  "description": "Real-time context window gauge, cache hit rate, turn latency/speed telemetry, 5h/7d token usage monitor, and Auto/Plan/Ask/Turbo execution mode switcher for Antigravity.",
   "author": {
     "name": "muamuauh",
     "url": "https://github.com/muamuauh"
