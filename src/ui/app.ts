@@ -1045,20 +1045,138 @@ async function main() {
   const caps: any = app.getHostCapabilities();
   if (caps?.message) {
     $("quickBar").classList.remove("hidden");
-    document.querySelectorAll<HTMLButtonElement>("#quickBar .pill-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
+    const composer = $("quickComposer");
+    const quickInput = $<HTMLTextAreaElement>("quickInput");
+    const quickSendBtn = $<HTMLButtonElement>("quickSendBtn");
+    const quickCopyBtn = $<HTMLButtonElement>("quickCopyBtn");
+    const quickCancelBtn = $<HTMLButtonElement>("quickCancelBtn");
+    const cmdButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("#quickBar .pill-btn[data-cmd]"));
+    let activeQuickCmd: string | null = null;
+    let quickSending = false;
+
+    const setActivePill = (cmd: string | null) => {
+      activeQuickCmd = cmd;
+      cmdButtons.forEach((b) => b.classList.toggle("active", b.dataset.cmd === cmd));
+    };
+
+    const closeComposer = () => {
+      composer.classList.add("hidden");
+      setActivePill(null);
+      quickInput.value = "";
+    };
+
+    const openComposerWithCmd = (cmd: string) => {
+      const isOpen = !composer.classList.contains("hidden");
+      const curVal = quickInput.value;
+      const knownPrefixMatch = curVal.match(/^\/(?:plan|compact|grill-me)(?:\s+|$)/);
+
+      // Clicking the active pill again when no extra text was typed collapses the composer
+      if (isOpen && activeQuickCmd === cmd && curVal.trim() === cmd) {
+        closeComposer();
+        return;
+      }
+
+      if (isOpen && knownPrefixMatch) {
+        const rest = curVal.slice(knownPrefixMatch[0].length);
+        quickInput.value = `${cmd} ${rest}`;
+      } else if (isOpen && curVal.trim()) {
+        quickInput.value = `${cmd} ${curVal.trimStart()}`;
+      } else {
+        quickInput.value = `${cmd} `;
+      }
+
+      composer.classList.remove("hidden");
+      setActivePill(cmd);
+      quickInput.focus();
+      const end = quickInput.value.length;
+      quickInput.setSelectionRange(end, end);
+    };
+
+    const sendQuickDraft = async () => {
+      const text = quickInput.value.trim();
+      if (!text || quickSending) return;
+      quickSending = true;
+      quickSendBtn.disabled = true;
+      try {
+        await app.sendMessage({
+          role: "user",
+          content: [{ type: "text", text }],
+        });
+        const lead = text.split(/\s+/)[0];
+        showToast(`已向当前对话发送 ${lead}`);
+        closeComposer();
+      } catch (err: any) {
+        showToast(`发送失败: ${err?.message || err}`, true);
+      } finally {
+        quickSending = false;
+        quickSendBtn.disabled = false;
+      }
+    };
+
+    const copyText = async (text: string, okMsg: string) => {
+      if (!text.trim()) return;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          showToast(okMsg);
+          return;
+        }
+      } catch {
+        // Fall back to execCommand below when iframe clipboard permission is restricted
+      }
+      const prevFocused = document.activeElement as HTMLElement | null;
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "-9999px";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      try {
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand("copy");
+        showToast(ok ? okMsg : "复制受限，请左键打开草稿框后按 Ctrl+C 复制", !ok);
+      } catch {
+        showToast("复制受限，请左键打开草稿框后按 Ctrl+C 复制", true);
+      } finally {
+        document.body.removeChild(ta);
+        prevFocused?.focus?.();
+      }
+    };
+
+    const copyQuickDraft = async () => {
+      await copyText(quickInput.value, "已复制到剪贴板，可粘贴到主输入框");
+    };
+
+    cmdButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const cmd = btn.dataset.cmd;
+        if (cmd) openComposerWithCmd(cmd);
+      });
+      btn.addEventListener("contextmenu", (e) => {
         const cmd = btn.dataset.cmd;
         if (!cmd) return;
-        try {
-          await app.sendMessage({
-            role: "user",
-            content: [{ type: "text", text: cmd }],
-          });
-          showToast(`已向当前对话发送 ${cmd}`);
-        } catch (err: any) {
-          showToast(`发送失败: ${err?.message || err}`, true);
-        }
+        e.preventDefault();
+        const payload = cmd === "/compact" ? cmd : `${cmd} `;
+        void copyText(payload, `已复制 ${cmd} 到剪贴板，可直接粘贴到主输入框`);
       });
+    });
+
+    quickSendBtn.addEventListener("click", () => void sendQuickDraft());
+    quickCopyBtn.addEventListener("click", () => void copyQuickDraft());
+    quickCancelBtn.addEventListener("click", closeComposer);
+
+    quickInput.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeComposer();
+        return;
+      }
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+        e.preventDefault();
+        void sendQuickDraft();
+      }
     });
   }
 

@@ -131,10 +131,28 @@
         </div>
         <p class="mode-desc" id="modeDesc">跟随 Antigravity 原生权限与沙箱策略。</p>
         <div class="quick-bar hidden" id="quickBar">
-          <span class="quick-label">快捷指令</span>
-          <button class="pill-btn" data-cmd="/plan">/plan</button>
-          <button class="pill-btn" data-cmd="/compact">/compact</button>
-          <button class="pill-btn" data-cmd="/grill-me">/grill-me</button>
+          <div class="quick-pills">
+            <span class="quick-label">快捷指令</span>
+            <button type="button" class="pill-btn" data-cmd="/plan" title="左键展开草稿编辑 · 右键直接复制 /plan">/plan</button>
+            <button type="button" class="pill-btn" data-cmd="/compact" title="左键展开草稿编辑 · 右键直接复制 /compact">/compact</button>
+            <button type="button" class="pill-btn" data-cmd="/grill-me" title="左键展开草稿编辑 · 右键直接复制 /grill-me">/grill-me</button>
+          </div>
+          <div class="quick-composer hidden" id="quickComposer">
+            <textarea
+              id="quickInput"
+              class="quick-input"
+              rows="2"
+              placeholder="补充任务说明（可选），Enter 发送 / Shift+Enter 换行 / Esc 收起"
+            ></textarea>
+            <div class="quick-composer-actions">
+              <span class="quick-hint">Enter 发送 · Esc 收起</span>
+              <div class="quick-action-btns">
+                <button type="button" class="tab-btn" id="quickCopyBtn" title="复制到剪贴板，可粘贴到主输入框">复制</button>
+                <button type="button" class="pill-btn quick-send-btn" id="quickSendBtn">发送</button>
+                <button type="button" class="tab-btn" id="quickCancelBtn" title="收起">✕</button>
+              </div>
+            </div>
+          </div>
         </div>
         </div>
       </section>
