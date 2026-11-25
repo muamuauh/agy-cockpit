@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "cockpit": {
+      "command": "node",
+      "args": ["${PLUGIN_ROOT}/bin/server.mjs", "--data-dir", "${PLUGIN_DATA}"]
+    }
+  }
+}

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agy Cockpit</title>
+  <style>
+/* __INLINE_CSS__ */
+  </style>
+</head>
+<body>
+  <div id="root" class="cockpit">
+    <header class="topbar">
+      <div class="brand">
+        <span class="pulse-dot" id="liveDot"></span>
+        <span class="brand-title">Agy Cockpit</span>
+        <span class="model-pill" id="modelBadge">loading...</span>
+      </div>
+      <div class="topbar-controls">
+        <select id="projectSelect" class="select-sm" title="按项目筛选"></select>
+        <select id="convSelect" class="select-sm" title="切换会话"></select>
+        <select id="refreshSelect" class="select-sm" title="自动刷新间隔">
+          <option value="0">手动</option>
+          <option value="3000" selected>3s</option>
+          <option value="10000">10s</option>
+        </select>
+        <button id="refreshBtn" class="icon-btn" title="立即刷新">↻</button>
+      </div>
+    </header>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <main class="grid">
+      <!-- Context Window Gauge -->
+      <section class="card">
+        <div class="card-head">
+          <span class="card-title">上下文窗口</span>
+          <select id="limitSelect" class="select-xs" title="窗口上限">
+            <option value="0">Auto</option>
+            <option value="200000">200K</option>
+            <option value="500000">500K</option>
+            <option value="1000000">1M</option>
+            <option value="2000000">2M</option>
+          </select>
+        </div>
+        <div class="gauge-row">
+          <div class="ring-anchor" id="ringAnchor">
+            <div class="ring-wrap" id="ringTrigger" tabindex="0" role="button" aria-label="查看上下文窗口详细占用分布" aria-describedby="ctxPopover">
+              <svg viewBox="0 0 100 100" class="ring-svg" aria-label="Context usage gauge">
+                <circle cx="50" cy="50" r="40" class="ring-bg"></circle>
+                <circle cx="50" cy="50" r="40" class="ring-fg" id="ringFg" stroke-dasharray="251.33" stroke-dashoffset="251.33"></circle>
+              </svg>
+              <div class="ring-center">
+                <div class="ring-pct" id="ctxPct">0%</div>
+                <div class="ring-sub" id="ctxUsed">0</div>
+              </div>
+              <span class="ring-hint" aria-hidden="true">明细</span>
+            </div>
+            <div class="ctx-popover" id="ctxPopover" role="tooltip">
+              <div class="pop-head">
+                <span class="pop-title">上下文窗口占用明细</span>
+                <span class="pop-total mono" id="popTotal">0 / 1.00M</span>
+              </div>
+              <div class="pop-stack" id="popStack"></div>
+              <div class="pop-rows" id="popRows"></div>
+              <div class="pop-meta mono" id="popMeta"></div>
+              <div class="pop-tools" id="popTools"></div>
+              <div class="pop-foot">总量与缓存为日志精确值 · 分项基于会话记录对齐估算（点击圆环可固定）</div>
+            </div>
+          </div>
+          <div class="ctx-meta">
+            <div class="kv">
+              <span class="kv-k">当前窗口</span>
+              <span class="kv-v mono" id="ctxRatio">0 / 1.0M</span>
+            </div>
+            <div class="kv">
+              <span class="kv-k">缓存命中率</span>
+              <span class="kv-v mono accent-good" id="cacheHit">0%</span>
+            </div>
+            <div class="kv">
+              <span class="kv-k">本轮新输入</span>
+              <span class="kv-v mono" id="uncachedIn">0</span>
+            </div>
+            <div class="kv">
+              <span class="kv-k">本轮输出</span>
+              <span class="kv-v mono" id="latestOut">0</span>
+            </div>
+          </div>
+        </div>
+        <div class="mini-stats">
+          <div class="mini-stat">
+            <span class="mini-k">累计新输入</span>
+            <span class="mini-v mono" id="totIn">0</span>
+          </div>
+          <div class="mini-stat">
+            <span class="mini-k">累计缓存读</span>
+            <span class="mini-v mono" id="totCache">0</span>
+          </div>
+          <div class="mini-stat">
+            <span class="mini-k">累计输出</span>
+            <span class="mini-v mono" id="totOut">0</span>
+          </div>
+          <div class="mini-stat">
+            <span class="mini-k">轮次 / 工具</span>
+            <span class="mini-v mono" id="totTurns">0 / 0</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Mode Switcher -->
+      <section class="card">
+        <div class="card-head">
+          <span class="card-title">执行模式控制</span>
+          <span class="mode-badge" id="modeBadge">NORMAL</span>
+        </div>
+        <div class="segmented" id="modeSegment" role="radiogroup" aria-label="Execution Mode">
+          <button class="seg-btn" data-mode="normal">Normal</button>
+          <button class="seg-btn" data-mode="plan">Plan</button>
+          <button class="seg-btn" data-mode="ask">Ask</button>
+          <button class="seg-btn" data-mode="turbo">Turbo</button>
+        </div>
+        <p class="mode-desc" id="modeDesc">跟随 Antigravity 原生权限与沙箱策略。</p>
+        <div class="quick-bar hidden" id="quickBar">
+          <span class="quick-label">快捷指令</span>
+          <button class="pill-btn" data-cmd="/plan">/plan</button>
+          <button class="pill-btn" data-cmd="/compact">/compact</button>
+          <button class="pill-btn" data-cmd="/grill-me">/grill-me</button>
+        </div>
+      </section>
+
+      <!-- Latency & Speed Telemetry -->
+      <section class="card card-wide">
+        <div class="card-head">
+          <span class="card-title">延迟与生成速度</span>
+          <span class="source-pill" id="latencySource">waiting</span>
+        </div>
+        <div class="perf-grid">
+          <div class="perf-tile">
+            <span class="perf-k">最近耗时</span>
+            <span class="perf-v mono" id="latLatest">--</span>
+          </div>
+          <div class="perf-tile">
+            <span class="perf-k">最近速度</span>
+            <span class="perf-v mono accent-info" id="spdLatest">--</span>
+          </div>
+          <div class="perf-tile">
+            <span class="perf-k">平均 / P95 耗时</span>
+            <span class="perf-v mono" id="latAvg">--</span>
+          </div>
+          <div class="perf-tile">
+            <span class="perf-k">平均 / 峰值速度</span>
+            <span class="perf-v mono" id="spdAvg">--</span>
+          </div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-head">
+            <span class="chart-title">近 24 轮趋势</span>
+            <div class="chart-tabs" id="chartTabs">
+              <button class="tab-btn active" data-chart="speed">速度 (tok/s)</button>
+              <button class="tab-btn" data-chart="latency">耗时 (s)</button>
+              <button class="tab-btn" data-chart="context">上下文 (K)</button>
+            </div>
+          </div>
+          <div class="chart-wrap" id="chartWrap">
+            <div class="chart-overlay">
+              <span class="chart-axis-max mono" id="chartAxisMax"></span>
+              <span class="chart-summary mono" id="chartSummary"></span>
+            </div>
+            <div class="chart-empty hidden" id="chartEmpty">暂无可绘制的回合数据</div>
+            <svg id="trendSvg" class="trend-svg" aria-label="Performance trend chart"></svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- Global Token Usage & 5h / Weekly Quota Monitor -->
+      <section class="card card-wide">
+        <div class="card-head">
+          <div class="usage-head-left">
+            <span class="card-title">Token 用量与限额</span>
+            <span class="source-pill" id="usageMetaPill">本地聚合</span>
+          </div>
+          <div class="usage-head-right">
+            <select id="quotaMetricSelect" class="select-xs" title="限额计算口径">
+              <option value="billable">非缓存 (新入+输出)</option>
+              <option value="total">总计 (含缓存)</option>
+            </select>
+            <button id="quotaEditToggle" class="tab-btn" title="自定义 5h 与周限额预算">⚙ 限额</button>
+          </div>
+        </div>
+
+        <form id="quotaEditor" class="quota-editor hidden">
+          <div class="quota-editor-row">
+            <label class="quota-field">
+              <span>5h 限额</span>
+              <input id="input5hLimit" type="text" class="quota-input mono" placeholder="如 8M" />
+            </label>
+            <label class="quota-field">
+              <span>7d 周限额</span>
+              <input id="input7dLimit" type="text" class="quota-input mono" placeholder="如 20M" />
+            </label>
+            <button type="submit" class="pill-btn quota-save-btn">保存预算</button>
+          </div>
+          <div class="quota-editor-row quota-cal-row">
+            <label class="quota-field">
+              <span>官方 5h 剩余%</span>
+              <input id="inputCal5hLeft" type="number" min="1" max="99" step="1" class="quota-input-sm mono" placeholder="69" />
+            </label>
+            <label class="quota-field">
+              <span>官方 7d 剩余%</span>
+              <input id="inputCal7dLeft" type="number" min="1" max="99" step="1" class="quota-input-sm mono" placeholder="86" />
+            </label>
+            <button type="button" id="quotaCalBtn" class="pill-btn">按剩余%校准</button>
+          </div>
+        </form>
+
+        <div class="quota-grid">
+          <div class="quota-panel">
+            <div class="quota-row">
+              <span class="quota-label">5 小时滚动限额</span>
+              <span class="quota-pct mono" id="q5hPct">100% left</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="q5hBar" style="width: 100%"></div>
+            </div>
+            <div class="quota-row quota-nums">
+              <span class="mono" id="q5hRatio">0 / 8.0M</span>
+              <span class="quota-reset" id="q5hReset">窗口空闲</span>
+            </div>
+            <div class="quota-sub mono" id="q5hSub">新入 0 · 缓存 0 · 输出 0 · 0 轮</div>
+          </div>
+
+          <div class="quota-panel">
+            <div class="quota-row">
+              <span class="quota-label">近 7 天周限额</span>
+              <span class="quota-pct mono" id="q7dPct">100% left</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="q7dBar" style="width: 100%"></div>
+            </div>
+            <div class="quota-row quota-nums">
+              <span class="mono" id="q7dRatio">0 / 20.0M</span>
+              <span class="quota-reset" id="q7dReset">窗口空闲</span>
+            </div>
+            <div class="quota-sub mono" id="q7dSub">新入 0 · 缓存 0 · 输出 0 · 0 轮</div>
+          </div>
+        </div>
+
+        <div class="usage-lower">
+          <div class="usage-subbox">
+            <div class="usage-subtitle">
+              <span>近 7 天每日消耗</span>
+              <span class="mono" id="usageAllTime">总计 0</span>
+            </div>
+            <div class="daily-bars" id="dailyBars"></div>
+          </div>
+          <div class="usage-subbox">
+            <div class="usage-subtitle">
+              <span>近 7 天模型池分布</span>
+              <span class="mono" id="usageModelCount">0 个模型</span>
+            </div>
+            <div class="pool-pills mono" id="poolSummary"></div>
+            <div class="model-list" id="modelList"></div>
+          </div>
+        </div>
+
+        <p class="usage-note">
+          Token 聚合自本机全部会话日志；「非缓存」与「含缓存」分别保存独立预算。点右上「⚙ 限额」填入官方 View Usage 剩余% 即可一键反推校准。
+        </p>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <span id="convTitle" class="foot-title"></span>
+      <span id="updatedAt" class="foot-time mono"></span>
+    </footer>
+  </div>
+  <script>
+/* __INLINE_JS__ */
+  </script>
+</body>
+</html>

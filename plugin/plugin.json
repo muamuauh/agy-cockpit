@@ -1,0 +1,18 @@
+{
+  "name": "agy-cockpit",
+  "displayName": "Agy Cockpit",
+  "version": "1.0.0",
+  "description": "Real-time context window gauge, cache hit rate, turn latency/speed telemetry, 5h/7d token usage monitor, and Normal/Plan/Ask/Turbo execution mode switcher for Antigravity.",
+  "author": {
+    "name": "muamuauh",
+    "url": "https://github.com/muamuauh"
+  },
+  "homepage": "https://github.com/muamuauh/agy-cockpit",
+  "repository": "https://github.com/muamuauh/agy-cockpit",
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "打开 Agy Cockpit 监控面板查看当前上下文窗口、延迟和速度",
+    "查看当前会话的 Token 消耗、缓存命中率与最近几轮速度",
+    "帮我检查当前 Agy Cockpit 处于什么执行模式"
+  ]
+}
