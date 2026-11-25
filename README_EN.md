@@ -28,6 +28,7 @@
 </p>
 
 <p>
+  <a href="#preview">Preview</a> |
   <a href="#features">Features</a> |
   <a href="#execution-modes">Execution Modes</a> |
   <a href="#quick-install">Quick Install</a> |
@@ -41,6 +42,25 @@
 ---
 
 > **Design Principle**: Built strictly on Antigravity's official extension architecture (**MCP App + Lifecycle Hooks + Native Plugin**). No binary patching, no native DOM injection, and no probing of undocumented internal host services. Works seamlessly across both the **VS Code Antigravity Extension** and **Antigravity 2.0 Desktop**, packaged as self-contained bundles with zero runtime `node_modules`.
+
+## Preview
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" valign="top">
+        <img src="./assets/preview-overview.jpg" alt="Agy Cockpit - Context, Modes & Speed" width="380" />
+        <br />
+        <sub><strong>Context Gauge · Execution Modes · Speed &amp; Latency</strong></sub>
+      </td>
+      <td align="center" valign="top">
+        <img src="./assets/preview-usage.jpg" alt="Agy Cockpit - 5h/7d Token Quotas & Model Pools" width="380" />
+        <br />
+        <sub><strong>5h / 7d Token Quotas · Daily Bars · Model Pools</strong></sub>
+      </td>
+    </tr>
+  </table>
+</div>
 
 ## Features
 

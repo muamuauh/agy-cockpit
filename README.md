@@ -28,6 +28,7 @@
 </p>
 
 <p>
+  <a href="#界面预览">界面预览</a> |
   <a href="#核心功能">核心功能</a> |
   <a href="#执行模式说明">执行模式</a> |
   <a href="#快速安装">快速安装</a> |
@@ -42,11 +43,24 @@
 
 > **设计理念**：完全基于 Antigravity 官方扩展体系（**MCP App + Lifecycle Hooks + Native Plugin**）构建，**不修改客户端二进制文件、不注入原生 DOM、不探测未公开内部接口**。一套插件同时兼容 **VS Code Antigravity 扩展** 与 **Antigravity 2.0 桌面端**，构建产物打包为单文件 Bundle，运行时零 `node_modules` 依赖。
 
-<!-- 如需展示面板预览图，可将截图放至 assets/preview.png 并取消下行注释：
+## 界面预览
+
 <div align="center">
-  <img src="./assets/preview.png" alt="Agy Cockpit Dashboard Preview" width="820" />
+  <table>
+    <tr>
+      <td align="center" valign="top">
+        <img src="./assets/preview-overview.jpg" alt="Agy Cockpit - Context, Modes & Speed" width="380" />
+        <br />
+        <sub><strong>上下文窗口 · 执行模式 · 延迟与速度曲线</strong></sub>
+      </td>
+      <td align="center" valign="top">
+        <img src="./assets/preview-usage.jpg" alt="Agy Cockpit - 5h/7d Token Quotas & Model Pools" width="380" />
+        <br />
+        <sub><strong>5h / 7d Token 限额 · 每日消耗 · 模型池分布</strong></sub>
+      </td>
+    </tr>
+  </table>
 </div>
--->
 
 ## 核心功能
 
