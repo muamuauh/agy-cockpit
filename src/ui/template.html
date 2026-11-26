@@ -230,26 +230,30 @@
 
         <form id="quotaEditor" class="quota-editor hidden">
           <div class="quota-editor-row">
-            <label class="quota-field">
-              <span>5h 限额</span>
-              <input id="input5hLimit" type="text" class="quota-input mono" placeholder="如 8M" />
-            </label>
-            <label class="quota-field">
-              <span>7d 周限额</span>
-              <input id="input7dLimit" type="text" class="quota-input mono" placeholder="如 20M" />
-            </label>
+            <div class="quota-fields">
+              <label class="quota-field">
+                <span>5h 限额</span>
+                <input id="input5hLimit" type="text" class="quota-input mono" placeholder="如 8M" />
+              </label>
+              <label class="quota-field">
+                <span>7d 周限额</span>
+                <input id="input7dLimit" type="text" class="quota-input mono" placeholder="如 20M" />
+              </label>
+            </div>
             <button type="submit" class="pill-btn quota-save-btn">保存预算</button>
           </div>
           <div class="quota-editor-row quota-cal-row">
-            <label class="quota-field">
-              <span>官方 5h 剩余%</span>
-              <input id="inputCal5hLeft" type="number" min="1" max="99" step="1" class="quota-input-sm mono" placeholder="69" />
-            </label>
-            <label class="quota-field">
-              <span>官方 7d 剩余%</span>
-              <input id="inputCal7dLeft" type="number" min="1" max="99" step="1" class="quota-input-sm mono" placeholder="86" />
-            </label>
-            <button type="button" id="quotaCalBtn" class="pill-btn">按剩余%校准</button>
+            <div class="quota-fields">
+              <label class="quota-field">
+                <span>官方 5h 剩余%</span>
+                <input id="inputCal5hLeft" type="number" min="0" max="99.9" step="any" class="quota-input-sm mono" placeholder="69" />
+              </label>
+              <label class="quota-field">
+                <span>官方 7d 剩余%</span>
+                <input id="inputCal7dLeft" type="number" min="0" max="99.9" step="any" class="quota-input-sm mono" placeholder="86" />
+              </label>
+            </div>
+            <button type="button" id="quotaCalBtn" class="pill-btn quota-cal-btn">按剩余%校准</button>
           </div>
         </form>
 

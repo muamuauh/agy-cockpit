@@ -273,9 +273,9 @@ function parseTokenShorthand(raw: string): number | null {
 }
 
 function formatLimitInput(n: number): string {
-  if (n >= 1_000_000 && n % 100_000 === 0) return `${+(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000 && n % 1_000 === 0) return `${Math.round(n / 1_000)}K`;
-  return String(n);
+  if (n >= 1_000_000) return `${+(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${+(n / 1_000).toFixed(1)}K`;
+  return String(Math.round(n));
 }
 
 function barColorForRemainingPct(remPct: number): string {
@@ -977,33 +977,20 @@ async function main() {
     }
   });
 
-  $("quotaEditor").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const lim5h = parseTokenShorthand($<HTMLInputElement>("input5hLimit").value);
-    const lim7d = parseTokenShorthand($<HTMLInputElement>("input7dLimit").value);
-    if (!lim5h || !lim7d) {
-      showToast("请输入有效的数字或简写（如 8M、20M、65M）", true);
-      return;
-    }
-    $("quotaEditor").classList.add("hidden");
-    void updateQuotas(
-      { fiveHourLimit: lim5h, weeklyLimit: lim7d },
-      `已保存当前口径限额（5h: ${fmtTokens(lim5h)} · 7d: ${fmtTokens(lim7d)}）`,
-    );
-  });
-
-  $("quotaCalBtn").addEventListener("click", () => {
+  const runQuotaCalibration = () => {
     const usage = currentSnapshot?.usage;
     if (!usage) return;
-    const raw5 = $<HTMLInputElement>("inputCal5hLeft").value.trim();
-    const raw7 = $<HTMLInputElement>("inputCal7dLeft").value.trim();
+    const cal5El = $<HTMLInputElement>("inputCal5hLeft");
+    const cal7El = $<HTMLInputElement>("inputCal7dLeft");
+    const raw5 = cal5El.value.trim();
+    const raw7 = cal7El.value.trim();
     const patch: Record<string, unknown> = {};
     const notes: string[] = [];
 
     if (raw5) {
       const left5 = Number(raw5);
-      if (!Number.isFinite(left5) || left5 <= 0 || left5 >= 100) {
-        showToast("5h 剩余% 需为 1–99 之间的数字", true);
+      if (!Number.isFinite(left5) || left5 < 0 || left5 >= 100) {
+        showToast("5h 剩余% 需为 0–99.9 之间的数字", true);
         return;
       }
       if (usage.fiveHour.usedTokens <= 0) {
@@ -1016,8 +1003,8 @@ async function main() {
     }
     if (raw7) {
       const left7 = Number(raw7);
-      if (!Number.isFinite(left7) || left7 <= 0 || left7 >= 100) {
-        showToast("7d 剩余% 需为 1–99 之间的数字", true);
+      if (!Number.isFinite(left7) || left7 < 0 || left7 >= 100) {
+        showToast("7d 剩余% 需为 0–99.9 之间的数字", true);
         return;
       }
       if (usage.weekly.usedTokens <= 0) {
@@ -1032,9 +1019,33 @@ async function main() {
       showToast("请至少填入一个官方剩余%（例如 5h=69、7d=86）", true);
       return;
     }
+    cal5El.value = "";
+    cal7El.value = "";
     $("quotaEditor").classList.add("hidden");
     void updateQuotas(patch, `已按官方剩余%校准预算（${notes.join(" · ")}）`);
+  };
+
+  $("quotaEditor").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const active = document.activeElement;
+    if (active === $("inputCal5hLeft") || active === $("inputCal7dLeft")) {
+      runQuotaCalibration();
+      return;
+    }
+    const lim5h = parseTokenShorthand($<HTMLInputElement>("input5hLimit").value);
+    const lim7d = parseTokenShorthand($<HTMLInputElement>("input7dLimit").value);
+    if (!lim5h || !lim7d) {
+      showToast("请输入有效的数字或简写（如 8M、20M、65M）", true);
+      return;
+    }
+    $("quotaEditor").classList.add("hidden");
+    void updateQuotas(
+      { fiveHourLimit: lim5h, weeklyLimit: lim7d },
+      `已保存当前口径限额（5h: ${fmtTokens(lim5h)} · 7d: ${fmtTokens(lim7d)}）`,
+    );
   });
+
+  $("quotaCalBtn").addEventListener("click", runQuotaCalibration);
 
   await app.connect();
 

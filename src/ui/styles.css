@@ -957,8 +957,8 @@ body {
 .quota-editor {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  padding: 8px 10px;
+  gap: 8px;
+  padding: 9px 10px;
   border-radius: 7px;
   background: var(--bg-subtle);
   border: 1px solid var(--border);
@@ -966,22 +966,35 @@ body {
 
 .quota-editor-row {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.quota-fields {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  flex-wrap: wrap;
 }
 
 .quota-cal-row {
-  padding-top: 6px;
+  padding-top: 8px;
   border-top: 1px dashed var(--border);
 }
 
 .quota-field {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 5px;
+  justify-content: space-between;
+  gap: 6px;
   font-size: 11px;
   color: var(--fg-muted);
+  min-width: 0;
+}
+
+.quota-field > span {
+  white-space: nowrap;
 }
 
 .quota-input,
@@ -990,16 +1003,19 @@ body {
   color: var(--fg);
   border: 1px solid var(--border);
   border-radius: 5px;
-  padding: 2px 6px;
+  padding: 3px 6px;
   font-size: 11.5px;
+  min-width: 0;
 }
 
 .quota-input {
-  width: 82px;
+  width: 78px;
+  flex: 0 1 78px;
 }
 
 .quota-input-sm {
-  width: 58px;
+  width: 56px;
+  flex: 0 1 56px;
 }
 
 .quota-input:focus,
@@ -1023,9 +1039,31 @@ body {
   color: var(--fg-muted);
 }
 
+.quota-save-btn,
+.quota-cal-btn {
+  background: var(--bg-card);
+  padding: 4px 11px;
+  font-weight: 600;
+}
+
 .quota-save-btn {
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
   color: var(--accent);
+}
+
+.quota-save-btn:hover {
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-card));
+  border-color: var(--accent);
+}
+
+.quota-cal-btn {
+  border-color: color-mix(in srgb, var(--good) 50%, transparent);
+  color: var(--good);
+}
+
+.quota-cal-btn:hover {
+  background: color-mix(in srgb, var(--good) 14%, var(--bg-card));
+  border-color: var(--good);
 }
 
 .quota-grid {
