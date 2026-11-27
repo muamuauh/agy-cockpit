@@ -12,12 +12,8 @@
 
 <p>
   <img src="https://img.shields.io/badge/Version-v1.0.0-2563eb?style=flat-square" alt="Version" />
-  <a href="https://github.com/muamuauh/agy-cockpit/actions/workflows/ci.yml">
-    <img src="https://img.shields.io/github/actions/workflow/status/muamuauh/agy-cockpit/ci.yml?style=flat-square&label=CI" alt="CI" />
-  </a>
-  <a href="./LICENSE">
-    <img src="https://img.shields.io/badge/License-MIT-22c55e?style=flat-square" alt="License" />
-  </a>
+  <a href="https://github.com/muamuauh/agy-cockpit/actions/workflows/ci.yml"><img src="https://github.com/muamuauh/agy-cockpit/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-22c55e?style=flat-square" alt="License" /></a>
   <img src="https://img.shields.io/badge/Antigravity-VS%20Code%20%7C%20Desktop-0f172a?style=flat-square" alt="Antigravity" />
   <img src="https://img.shields.io/badge/Node.js-%3E%3D20%20(SQLite%20%3E%3D22.5)-16a34a?style=flat-square" alt="Node.js" />
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-475569?style=flat-square" alt="Platform" />
