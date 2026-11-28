@@ -112,6 +112,12 @@ body {
   color: var(--fg);
 }
 
+.select-sm optgroup {
+  background: var(--bg-card);
+  color: var(--fg-muted);
+  font-style: normal;
+}
+
 .select-sm {
   font-size: 11px;
   padding: 3px 4px;

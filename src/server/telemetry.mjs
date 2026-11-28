@@ -977,6 +977,9 @@ export function buildCockpitSnapshot({
   dataDir,
   brainRoots = getDefaultBrainRoots(),
   conversationId = null,
+  projectName = null,
+  windowProjectName = null,
+  hostConversationId = null,
   contextLimitOverride = null,
   nowMs = Date.now(),
 } = {}) {
@@ -1061,25 +1064,65 @@ export function buildCockpitSnapshot({
     primaryProjectConversations.length > 0 ? primaryProjectConversations : fallbackConversations
   ).slice(0, 40);
 
+  // Scope pool to projectName when specified (e.g. per-window workspace root or user project filter)
+  const scopedPool = projectName
+    ? visibleConversations.filter((c) => metaById.get(c.conversationId)?.projectName === projectName)
+    : visibleConversations;
+  const activePool = scopedPool.length > 0 ? scopedPool : visibleConversations;
+
+  const unwrapToPool = (rawId, pool) => {
+    if (!rawId) return null;
+    let curId = rawId;
+    const visited = new Set();
+    while (curId && !visited.has(curId)) {
+      visited.add(curId);
+      const found = pool.find((c) => c.conversationId === curId);
+      if (found) return found;
+      const parentId = dbSummaries.get(curId)?.parentConversationId || "";
+      if (parentId) {
+        curId = parentId;
+        continue;
+      }
+      break;
+    }
+    return null;
+  };
+
+  const resolveCurrentInPool = (pool) => {
+    let cur = unwrapToPool(hostConversationId, pool);
+    if (!cur && activeSession?.conversationId) {
+      const activeInPool = unwrapToPool(activeSession.conversationId, pool);
+      if (activeInPool) {
+        const newestInPool = pool[0] || null;
+        const activeAt = typeof activeSession.updatedAtMs === "number" ? activeSession.updatedAtMs : 0;
+        const isStale =
+          newestInPool &&
+          newestInPool.conversationId !== activeInPool.conversationId &&
+          newestInPool.mtimeMs > activeAt + 3_000;
+        cur = isStale ? newestInPool : activeInPool;
+      }
+    }
+    if (!cur && pool.length > 0) cur = pool[0];
+    if (!cur && conversations.length > 0) cur = conversations[0];
+    return cur;
+  };
+
+  const globalCurrentConv = resolveCurrentInPool(visibleConversations);
+  const scopedCurrentConv = activePool === visibleConversations ? globalCurrentConv : resolveCurrentInPool(activePool);
+
   let selected = null;
   if (conversationId) {
     selected = conversations.find((c) => c.conversationId === conversationId) || null;
   }
-  if (!selected && activeSession?.conversationId) {
-    selected =
-      visibleConversations.find((c) => c.conversationId === activeSession.conversationId) ||
-      conversations.find((c) => c.conversationId === activeSession.conversationId) ||
-      null;
-  }
-  if (!selected && visibleConversations.length > 0) {
-    selected = visibleConversations[0];
-  }
-  if (!selected && conversations.length > 0) {
-    selected = conversations[0];
+  if (!selected) {
+    selected = scopedCurrentConv;
   }
   if (selected && !metaById.has(selected.conversationId)) {
     metaById.set(selected.conversationId, resolveMeta(selected));
   }
+
+  const liveCurrentId = scopedCurrentConv?.conversationId || null;
+  const globalCurrentId = globalCurrentConv?.conversationId || null;
 
   let metrics = null;
   if (selected) {
@@ -1094,7 +1137,7 @@ export function buildCockpitSnapshot({
   const projectMap = new Map();
   const conversationList = visibleConversations.map((c) => {
     const meta = metaById.get(c.conversationId);
-    const isActive = activeSession?.conversationId === c.conversationId;
+    const isActive = globalCurrentId === c.conversationId;
     if (meta.projectName) {
       const prev = projectMap.get(meta.projectName) || {
         name: meta.projectName,
@@ -1131,6 +1174,10 @@ export function buildCockpitSnapshot({
     mode: modeState.mode,
     modeUpdatedAt: modeState.updatedAt,
     modeDescriptions: MODE_DESCRIPTIONS,
+    currentConversationId: liveCurrentId,
+    globalCurrentConversationId: globalCurrentId,
+    windowProjectName: windowProjectName || null,
+    selectedConversationId: selected?.conversationId || null,
     activeConversationId: selected?.conversationId || null,
     projects,
     conversations: conversationList,

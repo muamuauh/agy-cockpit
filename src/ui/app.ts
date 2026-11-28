@@ -131,6 +131,10 @@ interface Snapshot {
   mode: Mode;
   modeUpdatedAt: string | null;
   modeDescriptions: Record<Mode, { label: string; badge: string; summary: string }>;
+  currentConversationId?: string | null;
+  globalCurrentConversationId?: string | null;
+  windowProjectName?: string | null;
+  selectedConversationId?: string | null;
   activeConversationId: string | null;
   projects?: ProjectItem[];
   conversations: ConversationItem[];
@@ -180,11 +184,14 @@ interface Snapshot {
 
 const CIRCUMFERENCE = 2 * Math.PI * 40; // r = 40
 const STORAGE_COLLAPSED_KEY = "agy-cockpit:collapsed-cards";
+const CURRENT_CONV_VALUE = "__current__";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
 let currentSnapshot: Snapshot | null = null;
 let selectedProject = "";
+let hasHydratedWindowProject = false;
+let followCurrent = true;
 let selectedConversationId: string | null = null;
 let selectedLimitOverride = 0;
 let activeChart: ChartKind = "speed";
@@ -594,15 +601,26 @@ function renderSnapshot(snap: Snapshot) {
     applyCollapsedState();
   }
 
-  // Keep user's explicit selection only if it still exists in the list
+  // Auto-scope to host window's workspace project once on initial open if MCP roots provided it
+  if (!hasHydratedWindowProject) {
+    hasHydratedWindowProject = true;
+    if (
+      snap.windowProjectName &&
+      (snap.projects || []).some((p) => p.name === snap.windowProjectName)
+    ) {
+      selectedProject = snap.windowProjectName;
+    }
+  }
+
+  // In auto-follow mode, never pin to an old UUID; if a manually pinned conversation disappeared, fall back to followCurrent
   if (
+    !followCurrent &&
     selectedConversationId &&
     snap.conversations.length > 0 &&
     !snap.conversations.some((c) => c.conversationId === selectedConversationId)
   ) {
-    selectedConversationId = snap.activeConversationId;
-  } else if (!selectedConversationId && snap.activeConversationId) {
-    selectedConversationId = snap.activeConversationId;
+    followCurrent = true;
+    selectedConversationId = null;
   }
 
   // Project selector (filter conversations by project)
@@ -628,22 +646,39 @@ function renderSnapshot(snap: Snapshot) {
   projSelect.classList.toggle("hidden", projects.length === 0);
   projSelect.title = selectedProject ? `当前筛选项目: ${selectedProject}` : "按项目筛选会话";
 
-  // Conversation selector (filtered by selectedProject when set)
+  // Conversation selector: always keep "当前对话" at top for 1-click auto-follow
   const filteredConvs = selectedProject
     ? snap.conversations.filter((c) => c.projectName === selectedProject)
     : snap.conversations;
 
+  const liveId = snap.currentConversationId || snap.activeConversationId || null;
+  const liveConv =
+    (liveId && snap.conversations.find((c) => c.conversationId === liveId)) ||
+    snap.conversations.find((c) => c.isActive) ||
+    null;
+
   const convSelect = $<HTMLSelectElement>("convSelect");
-  const prevVal = selectedConversationId || snap.activeConversationId || "";
   convSelect.innerHTML = "";
-  if (filteredConvs.length === 0) {
-    const opt = document.createElement("option");
-    opt.value = "";
-    opt.textContent = "无项目会话";
-    convSelect.appendChild(opt);
-    convSelect.title = "无项目会话";
-  } else {
-    let selectedFullTitle = "切换会话";
+
+  const currentOpt = document.createElement("option");
+  currentOpt.value = CURRENT_CONV_VALUE;
+  const liveShort = liveConv
+    ? selectedProject && liveConv.projectName === selectedProject
+      ? liveConv.shortTitle || liveConv.title || liveConv.shortId
+      : liveConv.label || liveConv.title || liveConv.shortId
+    : "";
+  currentOpt.textContent = liveShort ? `● 当前 · ${liveShort}` : "● 当前对话（自动跟随）";
+  const scopePrefix = selectedProject ? `自动跟随 ${selectedProject} 当前对话：` : "自动跟随全局当前对话：";
+  currentOpt.title = liveConv
+    ? `${scopePrefix}${liveConv.fullLabel || liveShort} · ${liveConv.shortId}`
+    : scopePrefix.slice(0, -1);
+  if (followCurrent) currentOpt.selected = true;
+  convSelect.appendChild(currentOpt);
+
+  let selectedFullTitle = currentOpt.title;
+  if (filteredConvs.length > 0) {
+    const group = document.createElement("optgroup");
+    group.label = selectedProject ? `${selectedProject} 会话` : "历史 / 项目会话";
     for (const c of filteredConvs) {
       const opt = document.createElement("option");
       opt.value = c.conversationId;
@@ -653,14 +688,15 @@ function renderSnapshot(snap: Snapshot) {
       const fullText = c.fullLabel || displayText;
       opt.textContent = `${c.isActive ? "● " : ""}${displayText}`;
       opt.title = `${fullText} · ${c.shortId} (${c.sizeKB}KB)`;
-      if (c.conversationId === prevVal) {
+      if (!followCurrent && c.conversationId === selectedConversationId) {
         opt.selected = true;
         selectedFullTitle = opt.title;
       }
-      convSelect.appendChild(opt);
+      group.appendChild(opt);
     }
-    convSelect.title = selectedFullTitle;
+    convSelect.appendChild(group);
   }
+  convSelect.title = selectedFullTitle;
 
   // Mode UI
   const mode = snap.mode;
@@ -773,18 +809,22 @@ async function main() {
     if (ctx?.styles?.variables) applyHostStyleVariables(ctx.styles.variables);
   };
 
+  const buildQueryArgs = (extra: Record<string, unknown> = {}) => {
+    const args: Record<string, unknown> = { ...extra, projectName: selectedProject };
+    if (!followCurrent && selectedConversationId) args.conversationId = selectedConversationId;
+    if (selectedLimitOverride > 0) args.contextLimit = selectedLimitOverride;
+    return args;
+  };
+
   const refresh = async (silent = true) => {
     if (pollInFlight) return;
     pollInFlight = true;
     const reqSeq = ++stateSeq;
     $("liveDot").classList.add("busy");
     try {
-      const args: Record<string, unknown> = {};
-      if (selectedConversationId) args.conversationId = selectedConversationId;
-      if (selectedLimitOverride > 0) args.contextLimit = selectedLimitOverride;
       const res: any = await app.callServerTool({
         name: "cockpit_get_snapshot",
-        arguments: args,
+        arguments: buildQueryArgs(),
       });
       if (reqSeq === stateSeq && res?.structuredContent) {
         renderSnapshot(res.structuredContent as Snapshot);
@@ -872,21 +912,21 @@ async function main() {
   $("refreshSelect").addEventListener("change", resetPoll);
   $("projectSelect").addEventListener("change", (e) => {
     selectedProject = (e.target as HTMLSelectElement).value || "";
-    if (currentSnapshot) {
-      const matching = selectedProject
-        ? currentSnapshot.conversations.filter((c) => c.projectName === selectedProject)
-        : currentSnapshot.conversations;
-      if (matching.length > 0 && !matching.some((c) => c.conversationId === selectedConversationId)) {
-        selectedConversationId = matching[0].conversationId;
-        void refresh(false);
-        return;
-      }
-      renderSnapshot(currentSnapshot);
-    }
+    // Switching project keeps auto-follow active so each window can independently track its own project's live conversation
+    followCurrent = true;
+    selectedConversationId = null;
+    void refresh(false);
   });
   $("convSelect").addEventListener("change", (e) => {
     const val = (e.target as HTMLSelectElement).value;
-    selectedConversationId = val || null;
+    if (!val || val === CURRENT_CONV_VALUE) {
+      followCurrent = true;
+      selectedConversationId = null;
+      void refresh(false);
+      return;
+    }
+    followCurrent = false;
+    selectedConversationId = val;
     void refresh(false);
   });
   $("limitSelect").addEventListener("change", (e) => {
@@ -902,12 +942,9 @@ async function main() {
       const reqSeq = ++stateSeq;
       $("liveDot").classList.add("busy");
       try {
-        const args: Record<string, unknown> = { mode: targetMode };
-        if (selectedConversationId) args.conversationId = selectedConversationId;
-        if (selectedLimitOverride > 0) args.contextLimit = selectedLimitOverride;
         const res: any = await app.callServerTool({
           name: "cockpit_set_mode",
-          arguments: args,
+          arguments: buildQueryArgs({ mode: targetMode }),
         });
         if (reqSeq === stateSeq && res?.structuredContent) {
           renderSnapshot(res.structuredContent as Snapshot);
@@ -938,12 +975,9 @@ async function main() {
     const reqSeq = ++stateSeq;
     $("liveDot").classList.add("busy");
     try {
-      const args: Record<string, unknown> = { ...patch };
-      if (selectedConversationId) args.conversationId = selectedConversationId;
-      if (selectedLimitOverride > 0) args.contextLimit = selectedLimitOverride;
       const res: any = await app.callServerTool({
         name: "cockpit_set_quotas",
-        arguments: args,
+        arguments: buildQueryArgs(patch),
       });
       if (reqSeq === stateSeq && res?.structuredContent) {
         renderSnapshot(res.structuredContent as Snapshot);

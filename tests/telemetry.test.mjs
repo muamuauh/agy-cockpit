@@ -191,7 +191,58 @@ test("buildCockpitSnapshot discovers conversations and reflects saved mode", () 
   const snap2 = buildCockpitSnapshot({ dataDir, brainRoots: [brainRoot] });
   assert.equal(snap2.conversations.length, 1);
   assert.equal(snap2.conversations[0].conversationId, "11111111-2222-3333-4444-555555555555");
+  assert.equal(snap2.currentConversationId, "11111111-2222-3333-4444-555555555555");
   assert.equal(snap2.usage.conversationsScanned, 3);
+
+  // Add a newer project conversation; stale activeSession should yield to the newer active transcript
+  const newerId = "22222222-3333-4444-5555-666666666666";
+  const newerDir = path.join(brainRoot, newerId, ".system_generated", "logs");
+  fs.mkdirSync(newerDir, { recursive: true });
+  const newerFile = path.join(newerDir, "transcript.jsonl");
+  fs.writeFileSync(
+    newerFile,
+    JSON.stringify({
+      step_index: "1",
+      type: "PLANNER_RESPONSE",
+      created_at: new Date().toISOString(),
+      model: "gemini-4-neon-high",
+      input_tokens: "3000",
+      cache_read_tokens: "12000",
+      output_tokens: "150",
+    }) + "\n",
+    "utf8",
+  );
+  const futureDate = new Date(Date.now() + 10_000);
+  fs.utimesSync(newerFile, futureDate, futureDate);
+  upsertSessionMeta(dataDir, {
+    conversationId: newerId,
+    transcriptPath: newerFile,
+    workspacePaths: ["e:\\codes\\quant-agent"],
+  });
+
+  const snap3 = buildCockpitSnapshot({ dataDir, brainRoots: [brainRoot] });
+  assert.equal(snap3.currentConversationId, newerId);
+  assert.equal(snap3.selectedConversationId, newerId);
+
+  // Explicit hostConversationId takes priority when opening in a specific conversation pane
+  const snap4 = buildCockpitSnapshot({
+    dataDir,
+    brainRoots: [brainRoot],
+    hostConversationId: "11111111-2222-3333-4444-555555555555",
+  });
+  assert.equal(snap4.currentConversationId, "11111111-2222-3333-4444-555555555555");
+  assert.equal(snap4.selectedConversationId, "11111111-2222-3333-4444-555555555555");
+
+  // Project-scoped follow independently tracks the target project's latest conversation
+  const snap5 = buildCockpitSnapshot({
+    dataDir,
+    brainRoots: [brainRoot],
+    projectName: "agy-cockpit",
+    windowProjectName: "agy-cockpit",
+  });
+  assert.equal(snap5.currentConversationId, "11111111-2222-3333-4444-555555555555");
+  assert.equal(snap5.globalCurrentConversationId, newerId);
+  assert.equal(snap5.windowProjectName, "agy-cockpit");
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });

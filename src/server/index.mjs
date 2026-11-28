@@ -8,8 +8,10 @@ import {
   ListResourcesRequestSchema,
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
+  RootsListChangedNotificationSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import {
+  extractProjectName,
   resolveDataDir,
   setModeState,
   setQuotaConfig,
@@ -89,6 +91,26 @@ export function createCockpitServer({ dataDir, htmlPath }) {
     { name: "agy-cockpit", version: "1.0.0" },
     { capabilities: { tools: {}, resources: {} } },
   );
+
+  let windowProjectName = null;
+  const refreshClientRoots = async () => {
+    try {
+      const caps = server.getClientCapabilities?.();
+      if (!caps?.roots) return;
+      const res = await server.listRoots();
+      const firstUri = Array.isArray(res?.roots) && res.roots.length > 0 ? res.roots[0]?.uri : null;
+      const proj = firstUri ? extractProjectName(firstUri) : "";
+      windowProjectName = proj || null;
+    } catch {
+      // Non-fatal: host may not implement roots/list
+    }
+  };
+  server.oninitialized = () => {
+    void refreshClientRoots();
+  };
+  server.setNotificationHandler(RootsListChangedNotificationSchema, async () => {
+    await refreshClientRoots();
+  });
 
   server.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: [
@@ -171,6 +193,7 @@ export function createCockpitServer({ dataDir, htmlPath }) {
           type: "object",
           properties: {
             conversationId: { type: "string" },
+            projectName: { type: "string" },
             contextLimit: { type: "number" },
           },
         },
@@ -193,6 +216,7 @@ export function createCockpitServer({ dataDir, htmlPath }) {
               enum: VALID_MODES,
             },
             conversationId: { type: "string" },
+            projectName: { type: "string" },
             contextLimit: { type: "number" },
           },
         },
@@ -217,6 +241,7 @@ export function createCockpitServer({ dataDir, htmlPath }) {
             fiveHourLimit: { type: "number" },
             weeklyLimit: { type: "number" },
             conversationId: { type: "string" },
+            projectName: { type: "string" },
             contextLimit: { type: "number" },
           },
         },
@@ -254,11 +279,32 @@ export function createCockpitServer({ dataDir, htmlPath }) {
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const name = req.params.name;
     const args = req.params.arguments || {};
+    const meta = req.params?._meta || {};
+    const hostConversationId =
+      (typeof meta.conversationId === "string" && meta.conversationId) ||
+      (typeof meta["com.google.antigravity/conversationId"] === "string" &&
+        meta["com.google.antigravity/conversationId"]) ||
+      null;
+    const metaWorkspace =
+      (typeof meta.workspaceUri === "string" && meta.workspaceUri) ||
+      (typeof meta["com.google.antigravity/workspaceUri"] === "string" &&
+        meta["com.google.antigravity/workspaceUri"]) ||
+      null;
+    const detectedWindowProject =
+      (metaWorkspace ? extractProjectName(metaWorkspace) : "") || windowProjectName || null;
+    // Empty string means user explicitly chose "全部项目"; undefined/omitted uses detected window project if available
+    const requestedProjectName =
+      typeof args.projectName === "string"
+        ? args.projectName || null
+        : detectedWindowProject;
 
     if (name === "open_cockpit" || name === "cockpit_get_snapshot") {
       const snapshot = buildCockpitSnapshot({
         dataDir: resolvedDataDir,
         conversationId: typeof args.conversationId === "string" ? args.conversationId : null,
+        projectName: requestedProjectName,
+        windowProjectName: detectedWindowProject,
+        hostConversationId,
         contextLimitOverride: typeof args.contextLimit === "number" ? args.contextLimit : null,
       });
       return {
@@ -279,6 +325,9 @@ export function createCockpitServer({ dataDir, htmlPath }) {
       const snapshot = buildCockpitSnapshot({
         dataDir: resolvedDataDir,
         conversationId: typeof args.conversationId === "string" ? args.conversationId : null,
+        projectName: requestedProjectName,
+        windowProjectName: detectedWindowProject,
+        hostConversationId,
         contextLimitOverride: typeof args.contextLimit === "number" ? args.contextLimit : null,
       });
       return {
@@ -322,6 +371,9 @@ export function createCockpitServer({ dataDir, htmlPath }) {
       const snapshot = buildCockpitSnapshot({
         dataDir: resolvedDataDir,
         conversationId: typeof args.conversationId === "string" ? args.conversationId : null,
+        projectName: requestedProjectName,
+        windowProjectName: detectedWindowProject,
+        hostConversationId,
         contextLimitOverride: typeof args.contextLimit === "number" ? args.contextLimit : null,
       });
       return {
